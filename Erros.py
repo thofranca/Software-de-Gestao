@@ -7,7 +7,7 @@ class ErroDeTipo(Exception):
 class ErroDeSituação(Exception):
     pass
 
-class ErroDeCodigo(Exception):
+class ErroDePlaca(Exception):
     pass
 
 def inteiro_menu(valor, num):
@@ -39,9 +39,9 @@ def situacao(valor):
     else:
         raise ErroDeSituação("Situação inválida!")
 
-def cod(valor, lis):
+def placa(valor, lis):
     for i in lis:
-        if i.codigo == valor:
-            raise ErroDeCodigo("O bem novo não pode ter o mesmo código que um bem existente!")
+        if i.placa == valor:
+            raise ErroDePlaca("Parece que o carro ja existe no sistema!")
     else:
         return valor

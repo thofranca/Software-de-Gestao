@@ -3,6 +3,8 @@ import time
 import pandas as pd
 import openpyxl
 import Erros
+import pickle
+from Erros import ErroDeTipo, ErroDeMenu, ErroDeSituação, ErroDePlaca, inteiro_menu, placa
 
 class Carro:
     def __init__(self, marca, modelo, placa):
@@ -38,7 +40,8 @@ class Carro:
 
 class Controle_Lavagens:
     def __init__(self):
-        self.carros = pd.DataFrame({
+        self.carros = []
+        self.dicionario = pd.DataFrame({
             "marca" : [],
             "modelo" : [],
             "placa" : []
@@ -46,63 +49,74 @@ class Controle_Lavagens:
 
     def carregar_dados(self):
         try:
-            self.carros = pd.read_excel('Controle.xlsx')
+            self.dicionario = pd.read_excel('Controle.xlsx')
+            with open("Controle.pkl", "rb") as arquivo:
+                dados_carregados = pickle.load(arquivo)
+                print("\nDados carregados com sucesso!")
+            self.carros = dados_carregados
             print("\nDados carregados com sucesso!")
         except FileNotFoundError:
-            print("Erro: o arquivo 'Controle.xlsx' não foi encontrado.")
+            print("Erro: o arquivo 'Controle.pkl' não foi encontrado.")
         except PermissionError:
             print("Erro: sem permissão para ler o arquivo.")
         except EOFError:
             print("Erro: o arquivo está vazio.")
         except Exception as e:
             print(f"Erro inesperado: {e}")    
+        except pickle.UnpicklingError:
+            print("Erro: o arquivo não contém dados válidos do pickle (pode estar corrompido).")
 
-    def salvar_dados(self, dados):
+    def salvar_dados(self, dados, dt):
         try:
-            dados.to_excel('Controle.xlsx')
-            print ("\nDados gravados com sucesso.")
+            with open("Controle.pkl", "wb") as arquivo:
+                pickle.dump(dados, arquivo)
+                print ("\nObjetos gravados com sucesso.")
+            dt.to_excel('Controle.xlsx', index = False)
+            print ("\nExcel gravado com sucesso.\n")
         except FileNotFoundError:
             print("Erro: caminho do arquivo inválido.")
         except PermissionError:
             print("Erro: sem permissão para gravar o arquivo.")
         except Exception as e:
             print(f"Erro inesperado: {e}")
-            
+        except pickle.PickleError as e:
+            print(f"Erro ao serializar os dados: {e}")
+
     def cadastrar_carro(self):
         try:
             print ("\n=== Novo Carro ===\n")
             marc = input("Indique a marca do veículo: ")
             model = input("\nIndique o modelo: ")
-            plac = input("\nIndique a placa: ")
+            plac = placa(input("\nIndique a placa: "), self.carros)
             car = Carro(marc, model, plac)
-            self.carros.loc[len(self.carros)] = car.dici()
-            self.salvar_dados(self.carros)
-            print(self.carros)
+            self.carros.append(car)
+            self.dicionario.loc[len(self.dicionario)] = car.dici()
+            self.salvar_dados(self.carros, self.dicionario)
+            print(self.dicionario)
             input("Pressione Enter para continuar")
-        except FileNotFoundError:
-            print("Erro: caminho do arquivo inválido.")
-        except PermissionError:
-            print("Erro: sem permissão para gravar o arquivo.")
-        except Exception as e:
-            print(f"Erro inesperado: {e}")
+        except ErroDePlaca as e:
+            print(f"Erro: {e}")
 
     def listar_carros(self):
-        return print(self.carros)
+        if len(self.carros) == 0:
+            return print("Não há carros listados")
+        else:
+            return print(self.dicionario)
     
-    def editar_bem(self):
+    def editar_carros(self):
         print("\n|| Alteração de Dados ||")
 
         try:
             while True:
                 self.listar_carros()
-                resp1 = (input("\nIndique a placa do carro que você deseja alterar o dado (Digite -1 para voltar): "))
+                resp1 = input("\nIndique a placa do carro que você deseja alterar o dado (Digite 0 para voltar): ")
 
-                if resp1 == -1:
+                if resp1 == 0:
                     break
                 else:
             
                     for b in self.carros:
-                        if b.codigo == resp1:
+                        if b.placa == resp1:
 
                             print("\n1 - Marca")
                             print("2 - Modelo")
@@ -111,42 +125,62 @@ class Controle_Lavagens:
 
                             resp2 = inteiro_menu(input("\nQual dado do bem deseja alterar? "), 4)
                             if resp2 == 1:
-                                codi = cod(inteiro(input("\nInforme o nova Marca: ")),self.bens)
-                                b.codigo = codi
-                                print(f"\nMarca atualizada para: {b.codigo}")
-                                self.salvar_dados(self.bens)
+                                marc = input("\nInforme o nova Marca: ")
+                                b.set_marca = marc
+                                self.dicionario.loc[self.dicionario["placa"]==resp1,"marca"] = marc
+                                print(f"\nMarca atualizada para: {b.marca}")
+                                self.salvar_dados(self.carros, self.dicionario)
                                 input(f"Pressione Enter para continuar: ")
                                 return
                             elif resp2 == 2:
-                                desc = input("\nInforme o novo Modelo: ")
-                                b.descri = desc
-                                print(f"\nModelo atualizada para: {b.descri}")
-                                self.salvar_dados(self.bens)
+                                mod = input("\nInforme o novo Modelo: ")
+                                b.set_modelo = mod
+                                self.dicionario.loc[self.dicionario["placa"]==resp1,"modelo"] = mod
+                                print(f"\nModelo atualizada para: {b.modelo}")
+                                self.salvar_dados(self.carros, self.dicionario)
                                 input(f"Pressione Enter para continuar: ")
                                 return
                             elif resp2 == 3:
-                                loc = input("\nInforme a nova placa: ")
-                                b.local = loc
-                                print(f"\nPlaca atualizada para: {b.local}")
-                                self.salvar_dados(self.bens)
+                                plac = placa(input("\nInforme a nova placa: "), self.carros)
+                                b.set_placa = plac
+                                self.dicionario.loc[self.dicionario["placa"]==resp1,"placa"] = plac
+                                print(f"\nPlaca atualizada para: {b.placa}")
+                                self.salvar_dados(self.carros, self.dicionario)
                                 input(f"Pressione Enter para continuar: ")
                                 return
                             else:
                                 return
                     else:
-                        print(f"\nCódigo Inválido!")
+                        print(f"\nPlaca não encontrada!")
 
-    
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para voltar ao Menu Principal")
-        except ErroDeTipo as e:
-            print(f"Erro: {e}")
-            input(f"Pressione Enter para voltar ao Menu Principal")
-        except ErroDeSituação as e:
+        except ErroDePlaca as e:
             print (f"Erro: {e}")
             input(f"Pressione Enter para voltar ao Menu Principal")
-        except ErroDeCodigo as e:
-            print (f"Erro: {e}")
-            input(f"Pressione Enter para voltar ao Menu Principal")
+        
+    def excluir_carro(self):
+        print("\n|| Exclusão de Carro ||")
+        self.listar_carros()
+
+        while True:
+            resp1 = input("\nIndique a placa do carro que você deseja excluir (Digite 0 para voltar): ")
+
+            if resp1 == 0:
+                return
+            else:
+                for b in self.carros:
+                    if b.placa == resp1:
+                        self.carros.remove(b)
+                        self.dicionario = self.dicionario[self.dicionario['placa'] != resp1]
+                        print(f"\nCarro excluído.")
+                        self.salvar_dados(self.carros,self.dicionario)
+                        input(f"Pressione Enter para continuar")
+                        return
+                else:
+                    print(f"Placa não encontrada!")
+                    input(f"Pressione Enter para continuar")
+                    return
+    
             

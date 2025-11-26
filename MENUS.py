@@ -55,7 +55,7 @@ def menu_produtos():
             resp = inteiro_menu(input("Escolha uma opção acima: "), 4)
 
             if resp == 0:
-                break
+                return
             elif resp == 1:
                 reg.nova_compra()
             elif resp == 2:
@@ -70,6 +70,7 @@ def menu_produtos():
             input(f"Pressione Enter para continuar")
 
 def lavagem():
+    reg.carregar_dados()
     while True:
         print("\n=== SOFTWARE DE GESTÃO ===")
         print("Feito por: Bruno Bellinaso e Thomáz França\n")

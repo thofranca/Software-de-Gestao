@@ -28,8 +28,7 @@ while True:
         elif resp == 3:
             menu.lavagem()
         elif resp == 4:
-            lav.excluir_carro()
-
+            pass
     except ErroDeMenu as e:
         print(f"Erro: {e}")
         input(f"Pressione Enter para continuar")

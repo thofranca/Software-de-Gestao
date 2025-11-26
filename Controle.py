@@ -16,7 +16,9 @@ class Carro:
         return {
             "marca" : self.__marca,
             "modelo" : self.__modelo,
-            "placa" : self.__placa
+            "placa" : self.__placa,
+            "lavagens" : len(self.__tempo),
+            "tempo medio": np.mean(self.__tempo)
         }
     
     def __str__(self):
@@ -85,7 +87,9 @@ class Controle_registro:
         self.dicionario = pd.DataFrame({
             "marca" : [],
             "modelo" : [],
-            "placa" : []
+            "placa" : [],
+            "lavagens" : [],
+            "tempo medio" : []
         })
 
         self.prodt = []
@@ -115,6 +119,10 @@ class Controle_registro:
                 dados_carregados = pickle.load(arquivo)
                 print("\nObjetos de Estoque carregados com sucesso!")
             self.prodt = dados_carregados
+            with open("Lavagens.pkl", "rb") as arquivo:
+                dados_carregados = pickle.load(arquivo)
+                print("\nObjetos de Lavagem carregados com sucesso!")
+            self.lavag = dados_carregados
         except FileNotFoundError:
             print("Erro: Um dos arquivos não foi encontrado.")
         except PermissionError:
@@ -149,6 +157,20 @@ class Controle_registro:
                 print ("\nObjetos de estoque gravados com sucesso.")
             dt.to_excel('Estoque.xlsx', index = False)
             print ("\nExcel de estoque gravado com sucesso.\n")
+        except FileNotFoundError:
+            print("Erro: caminho do arquivo inválido.")
+        except PermissionError:
+            print("Erro: sem permissão para gravar o arquivo.")
+        except Exception as e:
+            print(f"Erro inesperado: {e}")
+        except pickle.PickleError as e:
+            print(f"Erro ao serializar os dados: {e}")
+
+    def salvar_lavagem(self, dados):
+        try:
+            with open("Lavagens.pkl", "wb") as arquivo:
+                pickle.dump(dados, arquivo)
+                print ("\nObjetos de estoque gravados com sucesso.")
         except FileNotFoundError:
             print("Erro: caminho do arquivo inválido.")
         except PermissionError:
@@ -401,6 +423,8 @@ class Controle_registro:
                             if resp2 == 1:
                                 print("Lavagem iniciada!")
                                 self.lavag.append(Lavagem(b, "Em Andamento", time.time()))
+                                self.salvar_lavagem(self.lavag)
+                                return
                             else:
                                 return
                 else:
@@ -415,9 +439,9 @@ class Controle_registro:
             print("\nLavagens em andamento")
             for i in self.lavag:
                 if i.status.lower() == 'em andamento':
-                    print(f"{i.carro} - Em andamento - Tempo até aqui:{time.time() - i.tempo}")
-                elif i.status.lower() == 'pausada':
-                    print(f"{i.carro} - Pausada - Tempo até aqui:{time.time() - i.tempo}"))
+                    print(f"{i.carro} - Em andamento - Tempo até aqui: {(time.time() - i.tempo)/60} minutos")
+                elif i.status.lower() == 'pausado':
+                    print(f"{i.carro} - Pausada - Tempo até aqui: {(i.tempopausado - i.tempo)/60} minutos")
     
     def pausar_finalizar(self):
         print ('\n1 - Finalizar')
@@ -426,29 +450,58 @@ class Controle_registro:
         print ('0 - Voltar\n')
         try:
             resp1 = inteiro_menu(input("Indique uma das opções do menu: "),3)
+            var = None
             if resp1 == 1:
                 self.lavagens_and()
-                resp2 = input("Indique a placa do carro para finalizar a lavagem (0 para voltar): ")
+                resp2 = input("\nIndique a placa do carro para finalizar a lavagem (0 para voltar): ")
                 if resp2 == '0':
                     return
                 else:
                     for b in self.lavag:
                         if b.carro.placa == resp2:
-                            b.carro.set_tempocarro = time.time() - b.tempo
-                            print(f"Lavagem finalizada em {b.carro.tempo}")
+                            b.carro.set_tempocarro = time.time()- b.tempopausado - b.tempo
+                            print(f"Lavagem finalizada em {(b.carro.tempo_carro[len(b.carro.tempo_carro)])/60}")
                             self.lavag.remove(b)
+                            self.salvar_lavagem(self.lavag)
+                            return
             elif resp1 == 2:
                 self.lavagens_and()
-                resp2 = input("Indique a placa do carro para finalizar a lavagem (0 para voltar): ")
+                resp2 = input("\nIndique a placa do carro para pausar a lavagem (0 para voltar): ")
                 if resp2 == '0':
                     return
                 else:
                     for b in self.lavag:
                         if b.carro.placa == resp2:
-                            b.carro.set_tempocarro = time.time() - b.tempo
-                            print(f"Lavagem finalizada em {b.carro.tempo}")
-                            self.lavag.remove(b)
-
+                            if b.status == 'pausado':
+                                print("A lavagem deve estar em andamento para pausa-lá.")
+                                break
+                            else:
+                                b.set_tempopausado = time.time()
+                                b.set_status = 'pausado'
+                                print(f"Lavagem pausada em {(b.tempopausado - b.tempo)/60} minutos de trabalho")
+                                self.salvar_lavagem(self.lavag)
+                                return
+                    else:
+                        print(f"\nPlaca não encontrada!")
+            elif resp1 == 3:
+                self.lavagens_and()
+                resp2 = input("\nIndique a placa do carro para despausar a lavagem (0 para voltar): ")
+                if resp2 == '0':
+                    return
+                else:
+                    for b in self.lavag:
+                        if b.carro.placa == resp2:
+                            if b.status == 'pausado':
+                                b.set_tempopausado = time.time() - b.tempopausado
+                                b.set_status = 'Em Andamento'
+                                print(f"Lavagem em andamento")
+                                self.salvar_lavagem(self.lavag)
+                                return
+                            else:
+                                print("A lavagem deve estar em andamento para pausa-lá.")
+                                break
+                    else:
+                        print(f"\nPlaca não encontrada!")
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
@@ -458,6 +511,7 @@ class Lavagem:
         self.__carro = carro
         self.__status = status
         self.__tempo = tempo
+        self.__tempopausado = 0
 
     @property
     def carro(self):
@@ -468,6 +522,12 @@ class Lavagem:
     @property
     def tempo(self):
         return self.__tempo
+    @property
+    def tempopausado(self):
+        return self.__tempopausado
+    @tempopausado.setter
+    def set_tempopausado(self,n):
+        set_tempopausado = n
     @status.setter
     def set_status(self,n):
         self.__status = n

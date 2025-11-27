@@ -4,7 +4,7 @@ import pandas as pd
 import openpyxl
 import Erros
 import pickle
-from Erros import ErroDeTipo, ErroDeMenu, ErroDeSituação, ErroDePlaca, inteiro_menu, placa
+from Erros import ErroDeTipo, ErroDeMenu, ErroDePlaca, inteiro_menu, placa
 
 class Carro:
     def __init__(self, marca, modelo, placa):
@@ -12,18 +12,21 @@ class Carro:
         self.__modelo = modelo
         self.__placa = placa
         self.__tempo = []
+        self.lav = 0
     def dici(self):
         return {
             "marca" : self.__marca,
             "modelo" : self.__modelo,
             "placa" : self.__placa,
-            "lavagens" : len(self.__tempo),
-            "tempo medio": np.mean(self.__tempo)
+            "quantia de lavagens" : self.lav
         }
     
     def __str__(self):
         return f"\n{self.__marca} || {self.__modelo} || {self.__placa}"
     
+    @property
+    def lav(self):
+        return len(self.__tempo)
     @property
     def marca(self):
         return self.__marca
@@ -141,6 +144,11 @@ class Controle_registro:
             "faturamento" : [],
             "tempo de trabalho" : []
         })
+
+        self.manipulacao = pd.DataFrame({
+            'manipulacao' : []
+        })
+
     def carregar_dados(self):
         try:
             self.dicionario = pd.read_excel('Controle.xlsx')
@@ -208,7 +216,7 @@ class Controle_registro:
         try:
             with open("Lavagens.pkl", "wb") as arquivo:
                 pickle.dump(dados, arquivo)
-                print ("\nObjetos de estoque gravados com sucesso.")
+                print ("\nObjetos de lavagem gravados com sucesso.")
         except FileNotFoundError:
             print("Erro: caminho do arquivo inválido.")
         except PermissionError:
@@ -218,8 +226,10 @@ class Controle_registro:
         except pickle.PickleError as e:
             print(f"Erro ao serializar os dados: {e}")
 
-    def salvar_financas(self, dt):
+    def salvar_financas(self, dt, dt1, dt2):
         try:
+            dt['gasto'] = dt2['valor']
+            dt['tempo de trabalho'] = dt1['manipulacao']
             dt.to_excel('Financas.xlsx', index = False)
             print ("\nExcel de finanças gravado com sucesso.\n")
         except FileNotFoundError:
@@ -250,7 +260,7 @@ class Controle_registro:
         if len(self.carros) == 0:
             return print("\nNão há carros listados")
         else:
-            return print(self.dicionario)
+            return print(f"\n{self.dicionario}")
     
     def editar_carros(self):
         print("\n|| Alteração de Dados ||")
@@ -303,7 +313,10 @@ class Controle_registro:
 
         except ErroDeMenu as e:
             print(f"Erro: {e}")
-            input(f"Pressione Enter para voltar ao Menu Principal")
+            input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")        
         except ErroDePlaca as e:
             print (f"Erro: {e}")
             input(f"Pressione Enter para voltar ao Menu Principal")
@@ -320,6 +333,10 @@ class Controle_registro:
             else:
                 for b in self.carros:
                     if b.placa == resp1:
+                        for i in self.lavag:
+                            if i.carro.placa == b.placa:
+                                self.lavag.remove(i)
+                                self.salvar_lavagem(self.lavag)
                         self.carros.remove(b)
                         self.dicionario = self.dicionario[self.dicionario['placa'] != resp1]
                         print(f"\nCarro excluído.")
@@ -394,7 +411,7 @@ class Controle_registro:
                                             self.dicionario_prod.loc[self.dicionario_prod["nome"]==nom,"quantidade"] = i.quantidade
                                             self.dicionario_prod.loc[self.dicionario_prod["nome"]==nom,"valor"] = i.valor
                                             self.salvar_estoque(self.prodt, self.dicionario_prod)
-                                            self.financas['gasto'] = self.dicionario_prod['valor']
+                                            self.salvar_financas(self.financas, self.manipulacao, self.dicionario_prod)
                                             print("Dados cruzados com sucesso!")
                                             input("Pressione Enter para continuar")
                                         elif res == '2':
@@ -414,7 +431,7 @@ class Controle_registro:
                                 self.dicionario_prod.loc[self.dicionario_prod["nome"]==resp1,"valor"] = val
                                 print(f"\nValor atualizado para: {b.valor}")
                                 self.salvar_estoque(self.prodt, self.dicionario_prod)
-                                self.financas['gasto'] = self.dicionario_prod['valor']
+                                self.salvar_financas(self.financas, self.manipulacao, self.dicionario_prod)
                                 input(f"Pressione Enter para continuar: ")
                                 return
                             elif resp2 == 3:
@@ -431,7 +448,10 @@ class Controle_registro:
                         print(f"\nProduto não encontrado!")
         except ErroDeMenu as e:
             print(f"Erro: {e}")
-            input(f"Pressione Enter para voltar ao Menu Principal")
+            input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")        
         except TypeError as e:
             print(f"Erro: Tipo de valor inserido deve ser um número float")
         
@@ -452,6 +472,7 @@ class Controle_registro:
                         self.dicionario_prod = self.dicionario_prod[self.dicionario_prod['nome'] != resp1]
                         print(f"\nProduto excluído.")
                         self.salvar_estoque(self.prodt,self.dicionario_prod)
+                        self.salvar_financas(self.financas, self.manipulacao, self.dicionario_prod)
                         input(f"Pressione Enter para continuar")
                         return
                 else:
@@ -462,32 +483,32 @@ class Controle_registro:
     def inicar_lavagem(self):
             self.listar_carros()
             resp1 = input("\nIndique a placa do carro que você deseja iniciar lavagem (Digite 0 para voltar): ")
-
             if resp1 == '0':
                 return
             else:
+                encontrou_carro = False
                 for b in self.carros:
                     if b.placa == resp1:
+                        encontrou_carro = True
+                        encontrou_lavagem = False
                         for i in self.lavag:
-                            if b == i.carro:
+                            if b.placa == i.carro.placa:
+                                encontrou_lavagem = True
                                 print("\nParece que este carro ja está em lavagem!\n")
                                 input("Pressione Enter para continuar")
-                                break
-                            break
-                        else: 
+                                return
+                        if encontrou_lavagem == False: 
                             print("Carro indicado para lavagem:\n", b)
                             resp2 = inteiro_menu(input("\n1 - Sim\n0 - Não\n\nDeseja continuar? "), 1)
                             if resp2 == 1:
                                 print("Lavagem iniciada!")
                                 lav = Lavagem(b, "Em Andamento", time.time())
                                 self.lavag.append(lav)
-                                self.financas.loc[len(self.financas), "faturamento"] = lav.preco_lavagem
-                                self.salvar_financas(self.financas)
                                 self.salvar_lavagem(self.lavag)
                                 return
                             else:
                                 return
-                else:
+                if encontrou_carro == False:
                     print(f"Placa não encontrada!")
                     input(f"Pressione Enter para continuar")
                     return 
@@ -523,9 +544,9 @@ class Controle_registro:
                             self.lavag.remove(b)
                             self.salvar_lavagem(self.lavag)
                             self.salvar_carro(self.carros, self.dicionario)
-                            self.financas.loc[len(self.financas), 'tempo de trabalho'] = b.carro.tempo_carro[len(b.carro.tempo_carro)-1]
+                            self.manipulacao.loc[len(self.manipulacao), 'manipulacao'] = b.carro.tempo_carro[len(b.carro.tempo_carro)-1]
                             self.financas.loc[len(self.financas), "faturamento"] = b.preco_lavagem
-                            self.salvar_financas(self.financas)
+                            self.salvar_financas(self.financas, self.manipulacao, self.dicionario_prod)
                             print(f"Lavagem finalizada em {(b.carro.tempo_carro[len(b.carro.tempo_carro)-1])/60:.2f} minutos")
                             input("\nDigite Enter para continuar ")
                             print("\nDeseja atualizar o estoque pós lavagem?\n\n1 - Sim\n0 - Não")
@@ -575,9 +596,13 @@ class Controle_registro:
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")        
 
     def gastos(self):
         while True:
+            self.financas['gasto'] = self.dicionario_prod['valor']
             print("\n=== SOFTWARE DE GESTÃO ===")
             print("Feito por: Bruno Bellinaso e Thomáz França\n")
             print("- Finanças e Estátisticas -\n")
@@ -591,29 +616,75 @@ class Controle_registro:
                     break
                 elif resp == 1:
                     print("\nRegistro de valores\n")
-                    self.financas['gasto'] = self.dicionario_prod['valor']
-                    print(self.financas)
+                    print(self.financas.fillna(0))
                     input("\nPressione Enter para continuar")
                 elif resp == 2:
                     print("\nGastos, faturamento e lucro totais\n")
                     print(f"Gasto total: {np.sum(self.financas['gasto'])}\n")
-                    print(f"Média de gastos: {np.mean(self.financas['gasto'])}\n")
-                    print(f"Gasto mínimo: {np.min(self.financas['gasto'])}\n")
-                    print(f"Gasto máximo: {np.max(self.financas['gasto'])}\n")
+                    print(f"Média de gastos: {np.mean(self.financas.loc[self.financas['gasto'] != 0, 'gasto'])}\n")
+                    print(f"Gasto mínimo: {np.min(self.financas.loc[self.financas['gasto'] != 0, 'gasto'])}\n")
+                    print(f"Gasto máximo: {np.max(self.financas.loc[self.financas['gasto'] != 0, 'gasto'])}\n")
                     print(f"Faturamento total: {np.sum(self.financas['faturamento'])}\n")
-                    print(f"Faturamento médio: {np.mean(self.financas['faturamento'])}\n")
+                    print(f"Faturamento médio: {np.mean(self.financas.loc[self.financas['faturamento'] != 0, 'faturamento'])}\n")
                     print(f"Lucro total: {(np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto']))}\n")
                     input("Pressione Enter para continuar")
                 elif resp == 3:
                     print("\nHoras trabalhadas e R$/h\n")
-                    print(f"Horas totais trabalhadas: {(np.sum(self.financas['tempo de trabalho']))/360:.2f}\n")
-                    print(f"Reais por hora trabalhada: {(np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto']))/((np.sum(self.financas['tempo de trabalho']))/360):.2f} R$/h")
+                    print(f"Horas totais trabalhadas: {(np.sum(self.financas['tempo de trabalho'].fillna(0)))/360:.2f}\n")
+                    print(f"Reais por hora trabalhada: {((np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto'])))/((np.sum(self.financas['tempo de trabalho'].fillna(0)))/360):.2f} R$/h")
                     input("Pressione Enter para continuar")
             except ErroDeMenu as e:
                 print(f"Erro: {e}")
                 input(f"Pressione Enter para continuar")
+            except ErroDeTipo as e:
+                print(f"Erro: {e}")
+                input(f"Pressione Enter para continuar")        
 
     def tempo_por_carro(self):
-        for i in self.carros:
-            print(f"{i} - Tempo médio: {(np.mean(i.tempo_carro))/60:.2f}")
-        input("\nPressione Enter para continuar ")
+        while True:
+            print("\n=== SOFTWARE DE GESTÃO ===")
+            print("Feito por: Bruno Bellinaso e Thomáz França\n")
+            print("- Finanças e Estátisticas -\n")
+            print("1 - Dados de lavagem por carro")
+            print("2 - Carros que mais lavaram")
+            print("3 - Marcas mais frequentes")
+            print("4 - Modelos mais frequentes")
+            print("0 - Voltar\n")
+            try:
+                resp = inteiro_menu(input("Escolha uma opção acima: "), 4)
+                if resp == 0:
+                    break
+                elif resp == 1:
+                    for i in self.carros:
+                        if len(i.tempo_carro) > 0:
+                            print(f"{i} - Tempo médio: {(np.mean(i.tempo_carro))/60:.2f}\n")
+                            print(f"Quantidade de lavagens: {i.lav}\n")
+                        else: 
+                            print(f"{i} - Sem lavagem registrada\n")
+                    input("Pressione Enter para continuar ")
+                elif resp == 2:
+                    df = pd.DataFrame({
+                        "marca" : [],
+                        "modelo" : [],
+                        "placa" : [],
+                        "quantia de lavagens" : []
+                    })
+                    for i in self.carros:
+                        df.loc[len(df)] = i.dici()
+                    print(df.sort_values('quantia de lavagens', ascending=False))
+                    input("\nPressione Enter para continuar ")
+                elif resp == 3:
+                    print(f"\nMarca mais frequente: {self.dicionario['marca'].value_counts().idxmax()}\n")
+                    print(f"Quantidade de aparições: {self.dicionario['marca'].value_counts().max()}\n")
+                    input("\nPressione Enter para continuar ")   
+                elif resp == 4:
+                    print(f"\nModelo mais frequente: {self.dicionario['modelo'].value_counts().idxmax()}")
+                    print(f"Quantidade de aparições: {self.dicionario['modelo'].value_counts().max()}\n")
+                    input("\nPressione Enter para continuar ")
+            except ErroDeMenu as e:
+                print(f"Erro: {e}")
+                input(f"Pressione Enter para continuar")
+            except ErroDeTipo as e:
+                print(f"Erro: {e}")
+                input(f"Pressione Enter para continuar")        
+                        

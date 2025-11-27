@@ -1,5 +1,5 @@
 import Controle as ct 
-from Erros import ErroDeMenu, inteiro_menu
+from Erros import ErroDeMenu, ErroDeTipo, inteiro_menu
 
 reg = ct.Controle_registro()
 
@@ -36,6 +36,9 @@ def menu_carros():
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")        
 
 def menu_produtos():
     reg.carregar_dados()
@@ -68,6 +71,9 @@ def menu_produtos():
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")
 
 def lavagem():
     reg.carregar_dados()
@@ -96,6 +102,9 @@ def lavagem():
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")
 
 def estats():
     reg.carregar_dados()
@@ -104,7 +113,7 @@ def estats():
         print("Feito por: Bruno Bellinaso e Thomáz França\n")
         print("- Finanças e Estátisticas -\n")
         print("1 - Relação de dados (gastos, faturamento, tempo de serviço)")
-        print("2 - Tempo Gasto por Carro")
+        print("2 - Dados de clientes")
         print("0 - Voltar\n")
           
         try:
@@ -120,3 +129,6 @@ def estats():
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+        except ErroDeTipo as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")        

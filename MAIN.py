@@ -1,5 +1,5 @@
 import Controle as ct 
-from Erros import ErroDeMenu, inteiro_menu
+from Erros import ErroDeMenu, ErroDeTipo, inteiro_menu
 import MENUS as mn
 menu = mn
 
@@ -29,6 +29,10 @@ while True:
             menu.lavagem()
         elif resp == 4:
             menu.estats()
+
     except ErroDeMenu as e:
         print(f"Erro: {e}")
         input(f"Pressione Enter para continuar")
+    except ErroDeTipo as e:
+        print(f"Erro: {e}")
+        input(f"Pressione Enter para continuar")        

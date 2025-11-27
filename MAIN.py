@@ -28,7 +28,7 @@ while True:
         elif resp == 3:
             menu.lavagem()
         elif resp == 4:
-            pass
+            menu.estats()
     except ErroDeMenu as e:
         print(f"Erro: {e}")
         input(f"Pressione Enter para continuar")

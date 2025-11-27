@@ -96,3 +96,27 @@ def lavagem():
         except ErroDeMenu as e:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
+
+def estats():
+    reg.carregar_dados()
+    while True:
+        print("\n=== SOFTWARE DE GESTÃO ===")
+        print("Feito por: Bruno Bellinaso e Thomáz França\n")
+        print("- Finanças e Estátisticas -\n")
+        print("1 - Relação de dados (gastos, faturamento, tempo de serviço)")
+        print("2 - Tempo Gasto por Carro")
+        print("0 - Voltar\n")
+          
+        try:
+
+            resp = inteiro_menu(input("Escolha uma opção acima: "), 2)
+
+            if resp == 0:
+                break
+            elif resp == 1:
+                reg.gastos()
+            elif resp == 2:
+                reg.tempo_por_carro()
+        except ErroDeMenu as e:
+            print(f"Erro: {e}")
+            input(f"Pressione Enter para continuar")

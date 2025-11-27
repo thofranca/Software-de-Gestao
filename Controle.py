@@ -49,7 +49,6 @@ class Carro:
     def set_placa(self, n):
         self.__placa = n
         
-
 class produtos:
     def __init__(self, nome: str, valor: float, quantidade: float):
         self.__nome = nome
@@ -81,6 +80,38 @@ class produtos:
     @quantidade.setter
     def set_quantidade(self, n):
         self.__quantidade = n
+
+class Lavagem:
+    def __init__(self, carro: Carro, status: str, tempo: time):
+        self.__carro = carro
+        self.__status = status
+        self.__tempo = tempo
+        self.__tempopausado = 0
+
+    @property
+    def carro(self):
+        return self.__carro
+    @property
+    def status(self):
+        return self.__status
+    @property
+    def tempo(self):
+        return self.__tempo
+    @property
+    def tempopausado(self):
+        return self.__tempopausado
+    @tempopausado.setter
+    def set_tempopausado(self,n):
+        set_tempopausado = n
+    @status.setter
+    def set_status(self,n):
+        self.__status = n
+    @carro.setter
+    def set_carro(self,n):
+        self.__carro = n
+    @tempo.setter
+    def set_tempo(self,n):
+        self.__tempo = n
 class Controle_registro:
     def __init__(self):
         self.carros = []
@@ -88,8 +119,6 @@ class Controle_registro:
             "marca" : [],
             "modelo" : [],
             "placa" : [],
-            "lavagens" : [],
-            "tempo medio" : []
         })
 
         self.prodt = []
@@ -98,12 +127,12 @@ class Controle_registro:
             "valor" : [],
             "quantidade" : []
         })
-
         self.lavag = []
-        self.dicionario_lav = pd.DataFrame({
-            "carro" : [],
-            "status" : [],
-            "tempo" : []
+
+        self.financas = pd.DataFrame({
+            "gasto" : [],
+            "faturamento" : [],
+            "tempo de trabalho" : []
         })
     def carregar_dados(self):
         try:
@@ -313,7 +342,7 @@ class Controle_registro:
             return print(self.dicionario_prod)
     
     def editar_estoque(self):
-        print("\n|| Alteração de Dados ||")
+        print("\n|| Atualização Estoque ||\n")
 
         try:
             while True:
@@ -342,6 +371,9 @@ class Controle_registro:
                                             i.set_valor = i.valor+b.valor
                                             self.dicionario_prod.loc[self.dicionario_prod["nome"]==nom,"quantidade"] = i.quantidade
                                             self.dicionario_prod.loc[self.dicionario_prod["nome"]==nom,"valor"] = i.valor
+                                            self.salvar_estoque(self.prodt, self.dicionario_prod)
+                                            print("Dados cruzados com sucesso!")
+                                            input("Pressione Enter para continuar")
                                         elif res == '2':
                                             break
                                         else:
@@ -418,7 +450,7 @@ class Controle_registro:
                                 input("Pressione Enter para continuar")
                                 break
                         else: 
-                            print("Carro indicado para lavagem:", b)
+                            print("Carro indicado para lavagem:\n", b)
                             resp2 = inteiro_menu(input("\n1 - Sim\n0 - Não\n\nDeseja continuar? "), 1)
                             if resp2 == 1:
                                 print("Lavagem iniciada!")
@@ -460,10 +492,16 @@ class Controle_registro:
                     for b in self.lavag:
                         if b.carro.placa == resp2:
                             b.carro.set_tempocarro = time.time()- b.tempopausado - b.tempo
-                            print(f"Lavagem finalizada em {(b.carro.tempo_carro[len(b.carro.tempo_carro)])/60}")
                             self.lavag.remove(b)
                             self.salvar_lavagem(self.lavag)
-                            return
+                            self.salvar_carro(self.lavag)
+                            print(f"Lavagem finalizada em {(b.carro.tempo_carro[len(b.carro.tempo_carro)-1])/60} minutos")
+                            print("\nDeseja atualizar o estoque pós lavagem?\n\n1 - Sim\n0 - Não")
+                            resp3 = inteiro_menu(input("\nIndique uma das opções do menu: "),1)
+                            if resp3 == 0:
+                                return
+                            else: 
+                                self.editar_estoque()
             elif resp1 == 2:
                 self.lavagens_and()
                 resp2 = input("\nIndique a placa do carro para pausar a lavagem (0 para voltar): ")
@@ -506,34 +544,5 @@ class Controle_registro:
             print(f"Erro: {e}")
             input(f"Pressione Enter para continuar")
 
-class Lavagem:
-    def __init__(self, carro: Carro, status: str, tempo: time):
-        self.__carro = carro
-        self.__status = status
-        self.__tempo = tempo
-        self.__tempopausado = 0
-
-    @property
-    def carro(self):
-        return self.__carro
-    @property
-    def status(self):
-        return self.__status
-    @property
-    def tempo(self):
-        return self.__tempo
-    @property
-    def tempopausado(self):
-        return self.__tempopausado
-    @tempopausado.setter
-    def set_tempopausado(self,n):
-        set_tempopausado = n
-    @status.setter
-    def set_status(self,n):
-        self.__status = n
-    @carro.setter
-    def set_carro(self,n):
-        self.__carro = n
-    @tempo.setter
-    def set_tempo(self,n):
-        self.__tempo = n
+    def gastos(self):
+        pass

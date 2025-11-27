@@ -10,7 +10,7 @@ while True:
     print("1 - Gerenciar carros")
     print("2 - Gerenciar produtos de limpeza")
     print("3 - Lavagem")
-    print("4 - Estatísticas")
+    print("4 - Finanças e Estatísticas")
     print("0 - Sair\n")
     
     try:

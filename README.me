@@ -1,0 +1,164 @@
+Sistema de Gestão de Carros, Lavagens, Estoque e Finanças
+Autores: Bruno Bellinaso e Thomás França
+Este projeto implementa um software completo de gestão, com foco em:
+
+Controle de carros,
+Controle de estoque de produtos,
+Gerenciamento de lavagens (com tempo real, pausa e retomada),
+Controle financeiro e estatístico,
+Persistência de dados via pickle (.pkl) e Excel (.xlsx),
+Uso de NumPy, Pandas, openpyxl e tratamento de erros personalizado.
+
+O sistema funciona através de um menu interativo, executado pelo arquivo MAIN.py, que direciona o usuário para os submenus definidos em MENUS.py, que por sua vez utilizam o núcleo da aplicação presente em Controle.py (classe principal: Controle_registro).
+
+Funcionalidades Principais do Sistema
+
+O arquivo MAIN.py apresenta o menu principal:
+
+Menu Principal
+
+1 – Gerenciar carros
+2 – Gerenciar produtos de limpeza (Estoque)
+3 – Lavagem
+4 – Finanças e Estatísticas
+0 – Sair
+
+Cada opção ativa um menu específico estruturado em MENUS.py.
+
+1. Gerenciamento de Carros
+
+No menu “Gerenciar Carros”, o sistema permite:
+
+Cadastrar carro
+Listar carros
+Editar carro (marca, modelo ou placa)
+Excluir carro (removendo também lavagens associadas)
+
+Os dados são armazenados e carregados através de:
+
+Controle.xlsx
+Controle.pkl
+
+A classe utilizada é Carro, que armazena:
+
+Marca
+Modelo
+Placa
+Lista de tempos de lavagem já realizados
+
+Também há propriedades para acesso seguro e método dici() para converter dados em formato de DataFrame.
+
+2. Gerenciamento de Produtos (Estoque)
+
+O menu de produtos permite:
+
+Nova compra (cadastrar produto ou atualizar um existente)
+Listar estoque
+Editar estoque (nome, valor ou quantidade)
+Excluir produto
+
+Os dados são salvos em:
+
+Estoque.xlsx
+Estoque.pkl
+
+A classe usada é produtos, que contém:
+
+Nome
+Valor
+Quantidade
+
+Também gera dicionários para DataFrames.
+
+3. Sistema de Lavagem
+
+O sistema permite:
+Iniciar Lavagem
+Listar Lavagens em andamento
+Pausar lavagem
+Despausar lavagem
+Finalizar lavagem
+
+Cada lavagem possui:
+
+Carro associado
+Status (Em andamento / Pausado)
+Hora de início
+Preço da lavagem
+Controle de tempo pausado
+
+Ao finalizar:
+
+O tempo é registrado no carro
+O faturamento é registrado
+O usuário pode atualizar o estoque após a lavagem
+Dados são armazenados em:
+
+Lavagens.pkl
+
+Classe responsável: Lavagem
+
+4. Finanças e Estatísticas
+
+O menu de estatísticas permite visualizar:
+
+1. Dados financeiros
+Registro completo de gastos e faturamento
+Soma, média, mínimo e máximo de gastos
+Lucro total (faturamento - gasto)
+Horas totais trabalhadas
+Reais por hora (R$/h)
+
+Os dados são armazenados em:
+
+Financas.xlsx
+
+2. Dados dos clientes
+Tempo médio de lavagem por carro
+Quantidade total de lavagens
+Carros que mais lavaram
+Marcas mais frequentes
+Modelos mais frequentes
+
+Diversos cálculos usam NumPy e Pandas para análise dos dados.
+
+Persistência de Dados
+
+A classe Controle_registro é o “cérebro do sistema”, responsável por:
+
+Carregar os dados de:
+
+Controle.pkl / Controle.xlsx
+Estoque.pkl / Estoque.xlsx
+Lavagens.pkl
+Financas.xlsx
+
+Salvar alterações em todos esses arquivos
+
+Gerenciar listas de objetos:
+carros
+produtos
+lavagens
+finanças
+
+Produzir DataFrames sincronizados com as listas
+
+Tecnologias Utilizadas
+
+O projeto utiliza:
+
+Python
+NumPy (cálculos matemáticos)
+Pandas (DataFrames e manipulação de planilhas)
+Openxl trabalhar com arquivos Excel)
+pickle (persistência de objetos)
+Tratamento de erros personalizado (Erros.py)
+
+Execução
+
+Certifique-se de que todos os arquivos estejam no mesmo diretório:
+
+MAIN.py
+MENUS.py
+Controle.py
+Erros.py 

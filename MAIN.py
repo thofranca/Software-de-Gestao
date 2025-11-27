@@ -41,13 +41,13 @@ while True:
 
     """
        
-    print("\n=== SOFTWARE DE GESTÃO ===")
+    print("\n======== GARAGE GESTÃO ========\n")
     print("Feito por: Bruno Belinasso e Thomáz França\n")
-    print("1 - Gerenciar carros")
-    print("2 - Gerenciar produtos de limpeza")
-    print("3 - Lavagem")
-    print("4 - Finanças e Estatísticas")
-    print("0 - Sair\n")
+    print("\n1 - Gerenciar carros")
+    print("\n2 - Gerenciar produtos de limpeza")
+    print("\n3 - Lavagem")
+    print("\n4 - Finanças e Estatísticas")
+    print("\n0 - Sair\n")
     
     try:
 

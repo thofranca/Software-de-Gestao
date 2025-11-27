@@ -7,12 +7,28 @@ import pickle
 from Erros import ErroDeTipo, ErroDeMenu, ErroDePlaca, inteiro_menu, placa
 
 class Carro:
+
+    """
+    Representa um veículo cadastrado no sistema.
+
+    Atributos privados:
+        __marca (str): marca do veículo.
+        __modelo (str): modelo do veículo.
+        __placa (str): placa do veículo.
+        __tempo (list): lista de tempos (segundos) de cada lavagem registrada.
+    
+    Propriedades:
+        marca, modelo, placa, tempo_carro, lav (quantidade de lavagens registradas).
+
+    Método útil:
+        dici(): devolve um dicionário com os atributos principais para exportação ao DataFrame.
+    """
+
     def __init__(self, marca, modelo, placa):
         self.__marca = marca
         self.__modelo = modelo
         self.__placa = placa
         self.__tempo = []
-        self.lav = 0
     def dici(self):
         return {
             "marca" : self.__marca,
@@ -53,6 +69,21 @@ class Carro:
         self.__placa = n
         
 class produtos:
+    """
+    Representa um produto de limpeza do estoque.
+
+    Atributos privados:
+        __nome (str): nome do produto.
+        __valor (float): valor unitário do produto.
+        __quantidade (float): quantidade disponível (ml).
+
+    Propriedades:
+        nome, valor, quantidade.  
+    
+    Métodos:
+        dicio(): retorna um dicionário com nome, valor e quantidade para exportação ao DataFrame.
+    """
+
     def __init__(self, nome: str, valor: float, quantidade: float):
         self.__nome = nome
         self.__valor = valor
@@ -85,6 +116,22 @@ class produtos:
         self.__quantidade = n
 
 class Lavagem:
+    """
+    Representa uma lavagem em andamento ou finalizada.
+
+    Atributos privados:
+        __carro (Carro): objeto Carro associado à lavagem.
+        __status (str): estado atual ('Em Andamento', 'Pausado', etc).
+        __tempo (float): timestamp de início (time.time()).
+        __preco (float): preço cobrado pela lavagem.
+        __tempopausado (float): timestamp ou tempo acumulado de pausa conforme usado.
+
+    Propriedades:
+        carro, status, tempo, preco_lavagem, tempopausado.
+
+    Observação:
+        Classe com número maior de getters e setters por necessidade de controle de fluxo do sistema.
+    """
     def __init__(self, carro: Carro, status: str, tempo: time):
         self.__carro = carro
         self.__status = status
@@ -123,6 +170,50 @@ class Lavagem:
     def set_tempo(self,n):
         self.__tempo = n
 class Controle_registro:
+    """
+    Classe responsável por gerenciar todo o fluxo de dados e operações do sistema de 
+    controle de lavagem, estoque, finanças e manipulação de produtos.
+
+    Esta classe reúne todos os objetos principais do programa (Carro, Lavagem, Produto),
+    além de manter DataFrames persistentes e gerenciar leituras, escritas e atualizações
+    nos arquivos Excel e Pickle utilizados como banco de dados.
+
+    Atributos:
+    carros : list[Carro]
+        Lista de objetos Carro cadastrados.
+
+    dicionario : pandas.DataFrame
+        Representação tabular dos carros cadastrados 
+        (marca, modelo, placa). Sincronizada com a lista 'carros'.
+
+    prodt : list[produtos]
+        Lista de objetos correspondentes aos produtos do estoque.
+
+    dicionario_prod : pandas.DataFrame
+        Tabela com nome, valor e quantidade dos produtos. 
+        Sincronizada com a lista 'prodt'.
+
+    lavag : list[Lavagem]
+        Lista de lavagens em andamento ou finalizadas que ainda 
+        não foram apagadas do histórico.
+
+    financas : pandas.DataFrame
+        Tabela usada para registrar gastos, faturamento e tempo de trabalho.
+
+    manipulacao : pandas.DataFrame
+        DataFrame criado para auxiliar na manipulação dos dados de minutos trabalhados por lavagem.
+    
+    Esta classe funciona como o "cérebro" do software de gestão, reunindo:
+
+    - Operações de produto e cliente
+    - Gerenciamento completo de lavagens
+    - Atualização automática de planilhas
+    - Persistência de objetos Python
+    - Geração de estatísticas e indicadores financeiros
+
+    É a camada central de controle do sistema.
+
+    """  
     def __init__(self):
         self.carros = []
         self.dicionario = pd.DataFrame({
@@ -150,6 +241,21 @@ class Controle_registro:
         })
 
     def carregar_dados(self):
+        """
+        Carrega dados (Excel / pickle) para os atributos do registro:
+        - carros (pickle + Excel 'Controle.xlsx')
+        - estoque (pickle + Excel 'Estoque.xlsx')
+        - lavagens (pickle 'Lavagens.pkl')
+        - finanças (Excel 'Financas.xlsx')
+
+        Efeitos:
+            Atualiza self.carros, self.dicionario, self.prodt, self.dicionario_prod,
+            self.lavag e self.financas.
+
+        Tratamento de erros:
+            Captura FileNotFoundError, PermissionError, EOFError, pickle.UnpicklingError
+            e Exception geral, exibindo mensagem apropriada.
+        """
         try:
             self.dicionario = pd.read_excel('Controle.xlsx')
             print("\nExcel carros carregado com sucesso!")
@@ -181,6 +287,20 @@ class Controle_registro:
             print("Erro: o arquivo não contém dados válidos do pickle (pode estar corrompido).")
 
     def salvar_carro(self, dados, dt):
+        """
+        Salva a lista de objetos 'dados' (carros) em 'Controle.pkl' via pickle
+        e salva o DataFrame 'dt' em 'Controle.xlsx'.
+
+        Parâmetros:
+            dados (list): lista de objetos Carro a serializar.
+            dt (pandas.DataFrame): DataFrame representando os carros para salvar em Excel.
+
+        Efeitos:
+            Cria/atualiza os arquivos Controle.pkl e Controle.xlsx.
+
+        Tratamento de erros:
+            Captura FileNotFoundError, PermissionError, pickle.PickleError e Exception geral.
+        """
         try:
             with open("Controle.pkl", "wb") as arquivo:
                 pickle.dump(dados, arquivo)
@@ -197,6 +317,15 @@ class Controle_registro:
             print(f"Erro ao serializar os dados: {e}")
 
     def salvar_estoque(self, dados, dt):
+        """
+        Salva objetos de estoque em 'Estoque.pkl' e salva o DataFrame 'dt' em 'Estoque.xlsx'.
+
+        Parâmetros:
+            dados (list): lista de objetos produtos.
+            dt (pandas.DataFrame): DataFrame do estoque.
+
+        Efeitos e erros: similar a salvar_carro.
+        """
         try:
             with open("Estoque.pkl", "wb") as arquivo:
                 pickle.dump(dados, arquivo)
@@ -213,6 +342,15 @@ class Controle_registro:
             print(f"Erro ao serializar os dados: {e}")
 
     def salvar_lavagem(self, dados):
+        """
+        Salva a lista de lavagens em 'Lavagens.pkl'.
+
+        Parâmetros:
+            dados (list): lista de objetos Lavagem.
+
+        Tratamento de erros:
+            Captura FileNotFoundError, PermissionError, pickle.PickleError e Exception geral.
+        """
         try:
             with open("Lavagens.pkl", "wb") as arquivo:
                 pickle.dump(dados, arquivo)
@@ -227,6 +365,20 @@ class Controle_registro:
             print(f"Erro ao serializar os dados: {e}")
 
     def salvar_financas(self, dt, dt1, dt2):
+        """
+        Salva o DataFrame de finanças em 'Financas.xlsx'.
+
+        Parâmetros:
+            dt (pandas.DataFrame): DataFrame de finanças que será salvo.
+            dt1 (pandas.DataFrame): DataFrame usado para obter 'tempo de trabalho' (coluna 'manipulacao').
+            dt2 (pandas.DataFrame): DataFrame usado para obter 'gasto' (coluna 'valor').
+
+        Efeitos:
+            Atualiza colunas de dt ('gasto', 'tempo de trabalho') a partir de dt2/dt1 e salva em Excel.
+
+        Tratamento de erros:
+            Captura FileNotFoundError, PermissionError, pickle.PickleError e Exception geral.
+        """
         try:
             dt['gasto'] = dt2['valor']
             dt['tempo de trabalho'] = dt1['manipulacao']
@@ -242,6 +394,18 @@ class Controle_registro:
             print(f"Erro ao serializar os dados: {e}")
 
     def cadastrar_carro(self):
+        """
+        Solicita dados ao usuário (marca, modelo, placa), valida a placa e cadastra um novo Carro.
+
+        Fluxo:
+            - Lê inputs do usuário.
+            - Valida a placa chamando a função placa().
+            - Cria objeto Carro, adiciona em self.carros e adiciona linha em self.dicionario.
+            - Persiste chamando salvar_carro().
+
+        Exceções:
+            Captura ErroDePlaca (placa inválida/duplicada) e exibe mensagem.
+        """
         try:
             print ("\n=== Novo Carro ===\n")
             marc = input("Indique a marca do veículo: ")
@@ -257,12 +421,30 @@ class Controle_registro:
             print(f"Erro: {e}")
 
     def listar_carros(self):
+        """
+        Exibe os carros registrados.
+
+        Comportamento:
+            - Se não houver carros, imprime mensagem informativa.
+            - Caso contrário, imprime o DataFrame self.dicionario.
+        """
         if len(self.carros) == 0:
             return print("\nNão há carros listados")
         else:
             return print(f"\n{self.dicionario}")
     
     def editar_carros(self):
+        """
+        Permite alterar dados de um carro (marca, modelo, placa).
+
+        Fluxo:
+            - Lista carros e pede a placa a ser editada.
+            - Se encontrada, solicita qual campo editar e atualiza o objeto e o DataFrame.
+            - Persiste alterações com salvar_carro().
+
+        Exceções tratadas:
+            ErroDeMenu, ErroDeTipo, ErroDePlaca e TypeError em conversões.
+        """
         print("\n|| Alteração de Dados ||")
 
         try:
@@ -322,6 +504,18 @@ class Controle_registro:
             input(f"Pressione Enter para voltar ao Menu Principal")
         
     def excluir_carro(self):
+        """
+        Remove um carro do sistema.
+
+        Fluxo:
+            - Solicita a placa a ser excluída.
+            - Se houver lavagens associadas em self.lavag, remove-as primeiro.
+            - Remove o objeto Carro de self.carros e a linha correspondente de self.dicionario.
+            - Persiste as mudanças com salvar_carro() e salvar_lavagem().
+
+        Retorno:
+            None, apenas efeito colateral nos atributos e arquivos.
+        """
         print("\n|| Exclusão de Carro ||")
         self.listar_carros()
 
@@ -349,6 +543,17 @@ class Controle_registro:
                     return
     
     def nova_compra(self):
+        """
+        Adiciona produto ao estoque ou atualiza um produto existente.
+
+        Fluxo:
+            - Lê nome, valor e quantidade do produto.
+            - Se o produto já existir (comparação case-insensitive), atualiza quantidade e valor.
+            - Caso contrário, cria novo objeto produtos, adiciona à lista e DataFrame e persiste com salvar_estoque().
+
+        Erros:
+            Trata TypeError (valores não numéricos).
+        """
         try:
             print ("\n=== Novo Produto ===\n")
             nom = input("Indique o nome do produto: ")
@@ -375,12 +580,27 @@ class Controle_registro:
             print(f"Erro: Tipo de valor inserido deve ser um número float")
 
     def listar_estoque(self):
+        """
+        Exibe o DataFrame de estoque (self.dicionario_prod) ou mensagem caso esteja vazio.
+        """
         if len(self.prodt) == 0:
             return print("\nNão há produtos listados")
         else:
             return print(self.dicionario_prod)
     
     def editar_estoque(self):
+        """
+        Permite atualizar nome, valor ou quantidade de produto no estoque.
+
+        Fluxo:
+            - Lista estoque, solicita nome do produto.
+            - Se encontrado, pergunta qual campo alterar e atualiza o objeto e DataFrame.
+            - Oferece opção de 'cruzar' dados quando um novo nome já existe (fundir quantidades/valores).
+            - Persiste alterações com salvar_estoque() e salvar_financas() quando aplicável.
+
+        Exceções:
+            Trata ErroDeMenu, ErroDeTipo e TypeError para entradas inválidas.
+        """
         print("\n|| Atualização Estoque ||\n")
 
         try:
@@ -456,7 +676,14 @@ class Controle_registro:
             print(f"Erro: Tipo de valor inserido deve ser um número float")
         
     def excluir_produto(self):
+        """
+        Remove produto do estoque.
 
+        Fluxo:
+            - Solicita nome do produto (case-insensitive).
+            - Remove objeto da lista e linha do DataFrame, persiste com salvar_estoque()
+            e atualiza finanças via salvar_financas().
+        """
         print("\n|| Exclusão de Produto ||")
         self.listar_estoque()
 
@@ -481,39 +708,56 @@ class Controle_registro:
                     return    
                 
     def inicar_lavagem(self):
-            self.listar_carros()
-            resp1 = input("\nIndique a placa do carro que você deseja iniciar lavagem (Digite 0 para voltar): ")
-            if resp1 == '0':
-                return
-            else:
-                encontrou_carro = False
-                for b in self.carros:
-                    if b.placa == resp1:
-                        encontrou_carro = True
-                        encontrou_lavagem = False
-                        for i in self.lavag:
-                            if b.placa == i.carro.placa:
-                                encontrou_lavagem = True
-                                print("\nParece que este carro ja está em lavagem!\n")
-                                input("Pressione Enter para continuar")
-                                return
-                        if encontrou_lavagem == False: 
-                            print("Carro indicado para lavagem:\n", b)
-                            resp2 = inteiro_menu(input("\n1 - Sim\n0 - Não\n\nDeseja continuar? "), 1)
-                            if resp2 == 1:
-                                print("Lavagem iniciada!")
-                                lav = Lavagem(b, "Em Andamento", time.time())
-                                self.lavag.append(lav)
-                                self.salvar_lavagem(self.lavag)
-                                return
-                            else:
-                                return
-                if encontrou_carro == False:
-                    print(f"Placa não encontrada!")
-                    input(f"Pressione Enter para continuar")
-                    return 
+        """
+        Inicia uma nova lavagem para um carro existente.
+
+        Fluxo:
+            - Lista carros e solicita a placa do carro a ser lavado.
+            - Verifica se o carro existe; se não, informa o usuário.
+            - Verifica se o carro já está em lavagem (percorrendo self.lavag).
+            - Se não estiver em lavagem, solicita confirmação e cria um objeto Lavagem,
+            adicionando-o em self.lavag e salvando via salvar_lavagem().
+        """
+        self.listar_carros()
+        resp1 = input("\nIndique a placa do carro que você deseja iniciar lavagem (Digite 0 para voltar): ")
+        if resp1 == '0':
+            return
+        else:
+            encontrou_carro = False
+            for b in self.carros:
+                if b.placa == resp1:
+                    encontrou_carro = True
+                    encontrou_lavagem = False
+                    for i in self.lavag:
+                        if b.placa == i.carro.placa:
+                            encontrou_lavagem = True
+                            print("\nParece que este carro ja está em lavagem!\n")
+                            input("Pressione Enter para continuar")
+                            return
+                    if encontrou_lavagem == False: 
+                        print("Carro indicado para lavagem:\n", b)
+                        resp2 = inteiro_menu(input("\n1 - Sim\n0 - Não\n\nDeseja continuar? "), 1)
+                        if resp2 == 1:
+                            print("Lavagem iniciada!")
+                            lav = Lavagem(b, "Em Andamento", time.time())
+                            self.lavag.append(lav)
+                            self.salvar_lavagem(self.lavag)
+                            return
+                        else:
+                            return
+            if encontrou_carro == False:
+                print(f"Placa não encontrada!")
+                input(f"Pressione Enter para continuar")
+                return 
                 
     def lavagens_and(self):
+        """
+        Exibe lavagens em andamento ou pausadas.
+
+        Comportamento:
+            - Se não houver lavagens, imprime mensagem apropriada.
+            - Caso contrário, lista cada lavagem com status e tempo decorrido (em minutos).
+        """
         if len(self.lavag) == 0:
             print('\nNenhuma lavagem em andamento')
         else:
@@ -525,6 +769,20 @@ class Controle_registro:
                     print(f"{i.carro} - Pausada - Tempo até aqui: {(i.tempopausado - i.tempo)/60:.2f} minutos")
     
     def pausar_finalizar(self):
+        """
+        Menu para finalizar, pausar ou despausar lavagens.
+
+        Opções:
+            1 - Finalizar: finaliza a lavagem escolhida, registra tempo de trabalho no carro,
+                grava faturamento em self.financas e pergunta se deseja atualizar estoque.
+            2 - Pausar: marca a lavagem como pausada e grava tempo de pausa.
+            3 - Despausar: reverte pausa, ajustando os tempos.
+            0 - Voltar
+
+        Fluxo e efeitos:
+            - Afeta self.lavag, self.carros, self.manipulacao e self.financas; persiste via salvar_*.
+            - Trata entradas inválidas com ErroDeMenu e ErroDeTipo.
+        """
         print ('\n1 - Finalizar')
         print ('2 - Pausar')
         print ('3 - Despausar')
@@ -601,6 +859,19 @@ class Controle_registro:
             input(f"Pressione Enter para continuar")        
 
     def gastos(self):
+        """
+        Menu de finanças com relatórios rápidos.
+
+        Opções:
+            1 - Registros: exibe o DataFrame self.financas (com NaN preenchidos por display).
+            2 - Gasto, faturamento e lucro: mostra soma, média, mínimo, máximo e lucro total.
+            3 - Horas trabalhadas e R$/h: mostra horas totais e calcula reais por hora (R$/h).
+
+        Observações:
+            - A coluna 'gasto' é atualizada a partir de self.dicionario_prod['valor'] no início.
+            - Usa np.sum/np.mean/np.min/np.max; assegure que colunas não vazias para evitar warnings/exceptions.
+
+        """
         while True:
             self.financas['gasto'] = self.dicionario_prod['valor']
             print("\n=== SOFTWARE DE GESTÃO ===")
@@ -615,8 +886,11 @@ class Controle_registro:
                 if resp == 0:
                     break
                 elif resp == 1:
-                    print("\nRegistro de valores\n")
-                    print(self.financas.fillna(0))
+                    if len(self.financas) != 0:
+                        print("\nRegistro de valores\n")
+                        print(self.financas.fillna(0))
+                    else:
+                        print('\nNão há registros.')
                     input("\nPressione Enter para continuar")
                 elif resp == 2:
                     print("\nGastos, faturamento e lucro totais\n")
@@ -629,9 +903,12 @@ class Controle_registro:
                     print(f"Lucro total: {(np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto']))}\n")
                     input("Pressione Enter para continuar")
                 elif resp == 3:
-                    print("\nHoras trabalhadas e R$/h\n")
-                    print(f"Horas totais trabalhadas: {(np.sum(self.financas['tempo de trabalho'].fillna(0)))/360:.2f}\n")
-                    print(f"Reais por hora trabalhada: {((np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto'])))/((np.sum(self.financas['tempo de trabalho'].fillna(0)))/360):.2f} R$/h")
+                    if np.sum(self.financas['tempo de trabalho'].fillna(0)) != 0:
+                        print("\nHoras trabalhadas e R$/h\n")
+                        print(f"Horas totais trabalhadas: {(np.sum(self.financas['tempo de trabalho'].fillna(0)))/360:.2f}\n")
+                        print(f"Reais por hora trabalhada: {((np.sum(self.financas['faturamento']))-(np.sum(self.financas['gasto'])))/((np.sum(self.financas['tempo de trabalho'].fillna(0)))/360):.2f} R$/h")
+                    else:
+                        print("Sem horas de trabalho registradas.")
                     input("Pressione Enter para continuar")
             except ErroDeMenu as e:
                 print(f"Erro: {e}")
@@ -641,6 +918,19 @@ class Controle_registro:
                 input(f"Pressione Enter para continuar")        
 
     def tempo_por_carro(self):
+        """
+        Menu de estatísticas por carro e por atributos.
+
+        Opções:
+            1 - Dados de lavagem por carro: imprime tempo médio e quantidade de lavagens por carro.
+            2 - Carros que mais lavaram: gera DataFrame com contagem de lavagens e ordena do maior para o menor.
+            3 - Marcas mais frequentes: mostra a marca mais comum e quantidade de aparições.
+            4 - Modelos mais frequentes: mostra o modelo mais comum e quantidade de aparições.
+            0 - Voltar
+
+        Observações:
+            - As operações usam pandas (value_counts, sort_values) e numpy (mean).
+        """
         while True:
             print("\n=== SOFTWARE DE GESTÃO ===")
             print("Feito por: Bruno Bellinaso e Thomáz França\n")
@@ -655,12 +945,15 @@ class Controle_registro:
                 if resp == 0:
                     break
                 elif resp == 1:
-                    for i in self.carros:
-                        if len(i.tempo_carro) > 0:
-                            print(f"{i} - Tempo médio: {(np.mean(i.tempo_carro))/60:.2f}\n")
-                            print(f"Quantidade de lavagens: {i.lav}\n")
-                        else: 
-                            print(f"{i} - Sem lavagem registrada\n")
+                    if len(self.carros) > 0:
+                        for i in self.carros:
+                            if len(i.tempo_carro) > 0:
+                                print(f"{i} - Tempo médio: {(np.mean(i.tempo_carro))/60:.2f}\n")
+                                print(f"Quantidade de lavagens: {i.lav}\n")
+                            else: 
+                                print(f"{i} - Sem lavagem registrada\n")
+                    else:
+                        print("\nSem carros registrados.\n")
                     input("Pressione Enter para continuar ")
                 elif resp == 2:
                     df = pd.DataFrame({
@@ -669,18 +962,30 @@ class Controle_registro:
                         "placa" : [],
                         "quantia de lavagens" : []
                     })
-                    for i in self.carros:
-                        df.loc[len(df)] = i.dici()
-                    print(df.sort_values('quantia de lavagens', ascending=False))
-                    input("\nPressione Enter para continuar ")
+                    if len(self.carros) > 0:
+                        for i in self.carros:
+                            df.loc[len(df)] = i.dici()
+                            if np.sum(df['quantia de lavagens']) != 0:
+                                print(df.sort_values('quantia de lavagens', ascending=False))
+                            else: 
+                                print("\nNenhuma lavagem foi feita!\n")
+                    else:
+                        print("\nSem carros registrados.")
+                    input("Pressione Enter para continuar ")
                 elif resp == 3:
-                    print(f"\nMarca mais frequente: {self.dicionario['marca'].value_counts().idxmax()}\n")
-                    print(f"Quantidade de aparições: {self.dicionario['marca'].value_counts().max()}\n")
-                    input("\nPressione Enter para continuar ")   
+                    if len(self.carros) > 0:
+                        print(f"\nMarca mais frequente: {self.dicionario['marca'].value_counts().idxmax()}\n")
+                        print(f"Quantidade de aparições: {self.dicionario['marca'].value_counts().max()}\n")
+                    else:
+                        print("\nSem carros registrados.")
+                    input("Pressione Enter para continuar ")
                 elif resp == 4:
-                    print(f"\nModelo mais frequente: {self.dicionario['modelo'].value_counts().idxmax()}")
-                    print(f"Quantidade de aparições: {self.dicionario['modelo'].value_counts().max()}\n")
-                    input("\nPressione Enter para continuar ")
+                    if len(self.carros) > 0:
+                        print(f"\nModelo mais frequente: {self.dicionario['modelo'].value_counts().idxmax()}")
+                        print(f"Quantidade de aparições: {self.dicionario['modelo'].value_counts().max()}\n")
+                    else:
+                        print("\nSem carros registrados.")
+                    input("Pressione Enter para continuar ")
             except ErroDeMenu as e:
                 print(f"Erro: {e}")
                 input(f"Pressione Enter para continuar")
